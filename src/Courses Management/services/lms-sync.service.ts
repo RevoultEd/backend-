@@ -43,7 +43,7 @@ class LmsSyncService {
 
         const moodleUser = await moodleService.createUser({
           username: user.email.split('@')[0],
-          password: 'ChangeMeLater!' + Math.random().toString(36).substring(2, 10),
+          password: `ChangeMeLater!${  Math.random().toString(36).substring(2, 10)}`,
           firstname: firstName,
           lastname: lastName,
           email: user.email,
@@ -62,7 +62,7 @@ class LmsSyncService {
           username: user.email.split('@')[0],
           email: user.email,
           name: user.name,
-          password: 'ChangeMeLater!' + Math.random().toString(36).substring(2, 10),
+          password: `ChangeMeLater!${  Math.random().toString(36).substring(2, 10)}`,
         });
         
         results.openedx = openEdxUser;

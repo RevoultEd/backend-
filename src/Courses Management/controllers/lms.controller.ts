@@ -9,9 +9,17 @@ import User from '../../models/user.model';
 import UnifiedCourse from '../models/unified-course.model';
 
 class LmsController {
-  syncUser = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = await lmsSyncService.syncUser(req.user._id);
+  async performUserSync(userId: string) {
+    const user = await User.findById(userId);
+    if (!user) throw new NotFoundError('User not found');
     
+    const result = await lmsSyncService.syncUser(userId);
+    return { user, result };
+  }
+
+  // Existing endpoint for authenticated users
+  syncUser = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { result } = await this.performUserSync(req.user._id);
     res.json({
       success: true,
       message: 'User synchronized with LMS platforms',
@@ -19,19 +27,9 @@ class LmsController {
     });
   });
 
-  /**
-   * Synchronize a specific user with LMS platforms (admin only)
-   */
   syncSpecificUser = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { userId } = req.params;
-    
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new NotFoundError('User not found');
-    }
-    
-    const result = await lmsSyncService.syncUser(userId);
-    
+    const { user, result } = await this.performUserSync(userId);
     res.json({
       success: true,
       message: `User ${user.email} synchronized with LMS platforms`,
@@ -39,9 +37,13 @@ class LmsController {
     });
   });
 
+
+  async performCourseSync() {
+    return await courseSyncService.syncCourses();
+  }
+
   syncCourses = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const result = await courseSyncService.syncCourses();
-  
+    const result = await this.performCourseSync();
     res.json({
       success: true,
       message: 'Courses synchronized with LMS platforms',

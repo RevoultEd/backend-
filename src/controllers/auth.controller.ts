@@ -6,6 +6,8 @@ import { googleAuthService } from '../services/google-auth.service';
 import User from '../models/user.model';
 import { BadRequestError, UnauthorizedError } from '../utils/customErrors';
 import asyncHandler from '../utils/asyncHandler';
+import { lmsController } from '../Courses Management/controllers/lms.controller';
+import logger from '../utils/logger';
 
 class AuthController {
   register = asyncHandler(async (req: Request, res: Response) => {
@@ -64,6 +66,15 @@ class AuthController {
       });
     }
 
+    setTimeout(async () => {
+      try {
+        await lmsController.performUserSync(String(user._id));
+        await lmsController.performCourseSync();
+      } catch (error) {
+        logger.error('LMS operations failed:', error);
+      }
+    }, 0);
+
     const tokens = tokenService.generateTokens({
       userId: String(user._id),
       email: user.email,
@@ -96,6 +107,7 @@ class AuthController {
     
     // Default role is student for Google sign-ups
     const userRole = role && ['student', 'teacher'].includes(role) ? role : 'student';
+    let isNewUser = false;
 
     if (user) {
       if (!user.googleId) {
@@ -104,6 +116,7 @@ class AuthController {
         await user.save();
       }
     } else {
+      isNewUser = true;
       user = await User.create({
         name: googleUser.name,
         email: googleUser.email,
@@ -114,6 +127,24 @@ class AuthController {
         download_history: [],
         contributions: []
       });
+    }
+
+    if (isNewUser) {
+      try {
+        await lmsController.performUserSync(String(user._id));
+        await lmsController.performCourseSync();
+      } catch (error) {
+        console.error('LMS operations failed for new Google user:', error);
+      }
+    } else {
+      setTimeout(async () => {
+        try {
+          await lmsController.performUserSync(String(user._id));
+          await lmsController.performCourseSync();
+        } catch (error) {
+          console.error('Background LMS operations failed:', error);
+        }
+      }, 0);
     }
 
     const tokens = tokenService.generateTokens({
@@ -162,9 +193,17 @@ class AuthController {
     user.verificationTokenExpires = undefined;
     await user.save();
 
+    try {
+      // Use LMS controller methods
+      await lmsController.performUserSync(String(user._id));
+      await lmsController.performCourseSync();
+    } catch (error) {
+      console.error('LMS account creation failed for user:', user._id, error);
+    }
+  
     res.status(200).json({
       success: true,
-      message: 'Email verified successfully',
+      message: 'Email verified. LMS accounts and courses synced.',
     });
   });
 
