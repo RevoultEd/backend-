@@ -10,7 +10,7 @@ info:
     email: raymondomoyakhi@gmail.com
 
 servers:
-  - url: 'https://api.example.com/api/v1'
+  - url: 'https://backend-production-119b.up.railway.app/api/v1'
     description: Production server
   - url: 'http://localhost:3000/api/v1'
     description: Development server
